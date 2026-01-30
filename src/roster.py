@@ -1,18 +1,30 @@
 import pandas as pd
-from .normalize import normalize_text
+from .normalize import normalize_text, normalize_columns
 
-def build_roster(df: pd.DataFrame, col_class: str, col_name: str, col_email: str) -> pd.DataFrame:
-    tmp = df[[col_class, col_name, col_email]].copy()
-    tmp.columns = ["class", "name", "email"]
+def load_roster_master(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    名簿（正）を標準化して返す。
+    必須列（大文字小文字や改行は吸収）:
+      class, timetable, time, student_no, name
+    """
+    tmp = df.copy()
+    tmp.columns = [normalize_text(c).lower() for c in tmp.columns]
 
+    required = ["class", "timetable", "time", "student_no", "name"]
+    missing = [c for c in required if c not in tmp.columns]
+    if missing:
+        raise ValueError(f"RosterMaster missing columns: {missing}")
+
+    tmp["student_no"] = tmp["student_no"].map(normalize_text)
+    tmp["name"] = tmp["name"].map(normalize_text)
     tmp["class"] = tmp["class"].map(normalize_text)
-    tmp["name"]  = tmp["name"].map(normalize_text)
-    tmp["email"] = tmp["email"].map(normalize_text).str.lower()
+    tmp["timetable"] = tmp["timetable"].map(normalize_text)
+    tmp["time"] = tmp["time"].map(normalize_text)
 
-    # email空は除外
-    tmp = tmp[tmp["email"] != ""]
+    tmp = tmp[tmp["student_no"] != ""]
+    tmp = tmp.drop_duplicates(subset=["student_no"], keep="last").reset_index(drop=True)
 
-    # email基準で名簿化（表記ゆれに強い）
-    tmp = tmp.drop_duplicates(subset=["email"], keep="first")
-    tmp = tmp.sort_values(["class", "name", "email"]).reset_index(drop=True)
-    return tmp
+    # email はフォームから上書きする
+    tmp["email"] = ""
+
+    return tmp[["class", "timetable", "time", "student_no", "name", "email"]]
