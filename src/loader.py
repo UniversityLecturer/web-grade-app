@@ -1,11 +1,13 @@
 import pandas as pd
-from typing import Tuple, List, Optional
+from typing import Tuple, List
 from .normalize import normalize_columns
 
-def load_file(file) -> Tuple[pd.DataFrame, List[str]]:
+def read_any(file, sheet_name: str | None = None) -> Tuple[pd.DataFrame, List[str]]:
     """
-    Streamlitのuploaded_fileからDataFrameを返す。
-    xlsxの場合は、シート一覧も返す（選択はapp.py側）。
+    uploaded_file (streamlit) を読む。
+    - csv: そのまま読む
+    - xlsx: sheet_name が None ならシート一覧だけ返す（dfは空）
+            sheet_name があればそのシートを読む
     """
     name = getattr(file, "name", "").lower()
 
@@ -15,13 +17,11 @@ def load_file(file) -> Tuple[pd.DataFrame, List[str]]:
         return df, []
 
     if name.endswith(".xlsx") or name.endswith(".xls"):
-        # シート一覧だけ先に
         xls = pd.ExcelFile(file)
-        return pd.DataFrame(), xls.sheet_names
+        if sheet_name is None:
+            return pd.DataFrame(), xls.sheet_names
+        df = pd.read_excel(file, sheet_name=sheet_name)
+        df.columns = normalize_columns(list(df.columns))
+        return df, xls.sheet_names
 
     raise ValueError("Unsupported file type. Please upload .xlsx or .csv")
-
-def load_excel_sheet(file, sheet_name: str) -> pd.DataFrame:
-    df = pd.read_excel(file, sheet_name=sheet_name)
-    df.columns = normalize_columns(list(df.columns))
-    return df
