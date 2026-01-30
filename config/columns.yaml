@@ -1,0 +1,10 @@
+timestamp: "タイムスタンプ"
+email: "メールアドレス"
+class: "Class"
+name: "Name"
+
+# フォームの3問（任意：後回しOK）
+quiz_cols:
+  - "01"
+  - "02"
+  - "03"
